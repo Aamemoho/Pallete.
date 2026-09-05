@@ -1,1 +1,173 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>접촉각 — 🎨 팔레트</title>
+<style>
+  :root {
+    --ground: #e9ebee;
+    --ink: #14161a;
+    --muted: #6b7078;
+    --line: #ccd0d6;
+    --live: #1b3fa0;
+    --water: #4b7fd6;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 28px 20px 80px;
+    background: var(--ground); color: var(--ink);
+    font: 400 16px/1.6 -apple-system, "Apple SD Gothic Neo", "Pretendard",
+          "Noto Sans KR", "Malgun Gothic", sans-serif;
+  }
+  main { max-width: 34rem; margin: 0 auto; }
+  .back { color: var(--muted); text-decoration: none; font-size: .875rem; }
+  h1 { font-size: 1.5rem; font-weight: 600; margin: 1.5rem 0 .3rem; }
+  .lede { color: var(--muted); margin: 0 0 1.75rem; }
 
+  .stage { width: 100%; background: #f4f5f7; border-radius: 6px; overflow: hidden; }
+  svg { display: block; width: 100%; height: auto; }
+
+  .readout { display: flex; gap: 1.75rem; margin: 1.25rem 0 .25rem; font-size: .875rem; color: var(--muted); }
+  .readout b { display: block; font-size: 1.5rem; font-weight: 600; color: var(--ink); line-height: 1.2; }
+
+  .row { display: flex; align-items: center; gap: .75rem; padding: .8rem 0; border-bottom: 1px solid var(--line); }
+  .row label { flex: 0 0 3.5rem; }
+  input[type="range"] { flex: 1; accent-color: var(--live); }
+  .marks { display: flex; justify-content: space-between; font-size: .8125rem; color: var(--muted); padding-top: .4rem; }
+
+  .buttons { display: flex; gap: .5rem; padding-top: 1rem; }
+  button {
+    font: inherit; font-weight: 600; color: #fff; background: var(--live);
+    border: 0; border-radius: 4px; padding: .55rem 1.1rem; cursor: pointer;
+  }
+  button.quiet { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
+  button:disabled { opacity: .4; cursor: default; }
+  .note { margin-top: 2rem; color: var(--muted); font-size: .9375rem; }
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="../../">← 팔레트</a>
+  <h1>접촉각</h1>
+  <p class="lede">면에서 떼는 게 아니라, 면 위에서 움직인다.<br>
+    연잎과 유리판 사이를 값 하나로 지난다.</p>
+
+  <div class="stage">
+    <svg id="svg" viewBox="0 0 340 200" role="img" aria-label="접촉각에 따라 다르게 미끄러지는 물방울">
+      <line x1="0" y1="150" x2="340" y2="150" stroke="#ccd0d6" stroke-width="2"/>
+      <path id="tail" fill="var(--water)" opacity=".85"/>
+      <path id="drop" fill="var(--water)"/>
+    </svg>
+  </div>
+
+  <div class="readout">
+    <div>접촉각<b><span id="angleOut">100</span>°</b></div>
+    <div>잘 미끄러짐<b id="mobOut">0.62</b></div>
+    <div>꼬리<b id="tailOut">0.38</b></div>
+  </div>
+
+  <div class="row">
+    <label for="angle">각도</label>
+    <input id="angle" type="range" min="20" max="150" step="1" value="100">
+  </div>
+  <div class="marks"><span>유리판 20°</span><span>연잎 150°</span></div>
+
+  <div class="buttons">
+    <button id="slide">밀기</button>
+    <button id="reset" class="quiet">중립값(20°)</button>
+  </div>
+
+  <p class="note">잘 미끄러지는 정도와 꼬리 길이는 이 값 하나에서 같이 나온다.
+    다만 반대로 움직인다 — 퍼질수록 끌리며 길게 늘어지고, 구슬에 가까울수록 꼬리 없이 굴러간다.
+    쫀득함은 그 둘이 겹치는 가운데에서만 생긴다.</p>
+</main>
+
+<script>
+  const NEUTRAL = 20, V = 90000, BASE = 150, HOME = 150, START = 330;
+
+  const dropEl = document.getElementById("drop");
+  const tailEl = document.getElementById("tail");
+  const angleInput = document.getElementById("angle");
+  const angleOut = document.getElementById("angleOut");
+  const mobOut = document.getElementById("mobOut");
+  const tailOut = document.getElementById("tailOut");
+  const slideBtn = document.getElementById("slide");
+  const resetBtn = document.getElementById("reset");
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // 구면 캡. 부피 고정, 접촉각만 바뀐다.
+  function cap(deg) {
+    const t = deg * Math.PI / 180, c = Math.cos(t);
+    const R = Math.cbrt(3 * V / (Math.PI * (2 - 3 * c + c * c * c)));
+    return { R, a: R * Math.sin(t), h: R * (1 - c), big: deg > 90 ? 1 : 0 };
+  }
+
+  // 둘 다 접촉각에서 나온다. 방향이 반대일 뿐.
+  const mobility = (deg) => (deg - 20) / 130;          // 굴러가는 정도
+  const cling    = (deg) => 1 - (deg - 20) / 130;      // 끌리는 정도(꼬리)
+
+  const capPath = (cx, a, R, big) =>
+    `M ${cx - a} ${BASE} A ${R} ${R} 0 ${big} 1 ${cx + a} ${BASE} Z`;
+
+  let angle = 100, x = HOME, speed = 0, raf = null;
+
+  function render() {
+    const { R, a, h, big } = cap(angle);
+    dropEl.setAttribute("d", capPath(x, a, R, big));
+
+    // 꼬리: 뒤쪽으로 늘어지는 얕은 자국. 속도와 끌림이 함께 있을 때만 생긴다.
+    const len = cling(angle) * Math.min(Math.abs(speed) / 6, 1) * 150;
+    if (len > 2) {
+      const back = x + a * 0.6, tip = back + len, th = Math.max(1.5, h * 0.35);
+      tailEl.setAttribute("d",
+        `M ${back} ${BASE}
+         C ${back + len * 0.4} ${BASE - th}, ${tip - len * 0.2} ${BASE - th * 0.3}, ${tip} ${BASE}
+         Z`);
+    } else {
+      tailEl.setAttribute("d", "");
+    }
+  }
+
+  function setAngle(v) {
+    angle = Number(v);
+    angleInput.value = angle;
+    angleOut.textContent = angle;
+    mobOut.textContent = mobility(angle).toFixed(2);
+    tailOut.textContent = cling(angle).toFixed(2);
+    render();
+  }
+
+  function slide() {
+    if (raf) cancelAnimationFrame(raf);
+    const m = mobility(angle);
+    // 잘 미끄러질수록 빨리 오고 살짝 지나쳤다 돌아온다. 퍼진 쪽은 느리게 끌려온다.
+    const dur = 1500 - m * 800;
+    const overshoot = m * 26;
+    slideBtn.disabled = true;
+    x = START; speed = 0;
+    if (reduced) { x = HOME; render(); slideBtn.disabled = false; return; }
+
+    const t0 = performance.now();
+    let prev = START;
+    const step = (now) => {
+      const p = Math.min((now - t0) / dur, 1);
+      // 감쇠 스프링. 오버슛은 미끄러짐에 비례한다.
+      const e = 1 - Math.pow(2, -9 * p) * Math.cos(p * Math.PI * 2.2);
+      x = START + (HOME - START) * e - overshoot * Math.pow(2, -6 * p) * Math.sin(p * Math.PI * 3);
+      speed = prev - x;
+      prev = x;
+      render();
+      if (p < 1) raf = requestAnimationFrame(step);
+      else { x = HOME; speed = 0; render(); slideBtn.disabled = false; }
+    };
+    raf = requestAnimationFrame(step);
+  }
+
+  angleInput.addEventListener("input", (e) => setAngle(e.target.value));
+  slideBtn.addEventListener("click", slide);
+  resetBtn.addEventListener("click", () => setAngle(NEUTRAL));
+  setAngle(100);
+</script>
+</body>
+</html>
