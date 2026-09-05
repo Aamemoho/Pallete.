@@ -1,28 +1,41 @@
-# Pallete.
-Pallete! 🎨
+# 🎨 팔레트
 
-## 라이선스와 출처
+화면에서 요소를 하나씩 빼보고, 뭐가 죽는지 본다.
+관찰은 Are.na에 쌓고, 그중 **뺄 수 있는 것만** 여기서 요소가 된다.
 
-### 코드
+- 관찰 = Are.na 채널의 블록 (뺀 것 / 예상 / 실제)
+- 요소 = 켜고 끌 수 있는 값 하나 + 그 값의 중립값
+- 감산 = 제거가 아니라 중립값으로 되돌리기
 
-MIT. `LICENSE` 참고. 요소를 통째로 떼어다 자기 작업에 넣어도 되고, 출처만 남기면 된다.
+## 시작하기
 
-### 기록
+1. `build.mjs` 위쪽 `CHANNEL`에 Are.na 채널 슬러그를 넣는다.
+   채널을 열었을 때 주소의 마지막 조각. `https://www.are.na/aamemoho-oh/<이 부분>`
+2. `npm run build`
+3. `site/`를 아무 정적 서버로 열어본다. (`npx serve site`)
 
-`뺀 것 / 예상 / 실제`로 적은 관찰 기록은 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.ko).
-가져다 쓰거나 고쳐 써도 되고, 어디서 왔는지만 밝히면 된다.
+빌드는 두 가지를 만든다.
 
-### 캡처와 이미지
+- `site/data/arena.json` — 채널 스냅샷. 방문할 때마다 API를 때리지 않게 굳혀둔다.
+  Are.na가 안 되면 이전 스냅샷을 그대로 쓰고 빌드는 통과한다.
+- `site/data/elements.json` — `site/elements/*/meta.json`을 훑은 목록.
 
-여기 실린 화면 캡처 중 상당수는 내가 만든 화면이 아니다. **위 라이선스는 그것들을 덮지 않는다.**
+## Cloudflare Pages
 
-- 외부 화면 캡처의 권리는 각 저작권자에게 있다. 여기서는 무엇을 빼면 무엇이 죽는지 보기 위한
-  참조로만 쓰고, 원래 출처 링크를 함께 남긴다.
-- 내려달라는 요청이 오면 해당 블록을 내린다. 이슈로 알려주면 된다.
-- 외부 도구(생성형 편집 등)로 가공한 이미지가 섞일 경우, 그 결과물은 해당 서비스의 약관도
-  함께 따른다.
+- Build command: `npm run build`
+- Output directory: `site`
+- 환경변수 `ARENA_CHANNEL`로 슬러그를 덮어쓸 수 있다.
 
-### Are.na 채널
+## 요소 추가하기
 
-관찰은 [Are.na](https://www.are.na/) 채널에 먼저 쌓이고, 이 저장소의 `site/data/arena.json`은
-그 스냅샷일 뿐이다. 원본은 항상 채널 쪽이다.
+`site/elements/<이름>/` 폴더를 만들고 두 파일만 넣는다.
+루트 목록은 빌드할 때 자동으로 다시 훑으므로, 등록하는 곳은 따로 없다.
+
+```
+site/elements/<이름>/
+  index.html   # 값 하나를 조절하는 화면. 켠 상태와 중립 상태
+  meta.json    # name, param, neutral, observed, from, note
+```
+
+`neutral`이 이 시스템의 핵심 필드다. 요소를 뺀다는 건 이 값으로 되돌린다는 뜻이고,
+중립값을 정하지 못하는 것은 아직 요소가 아니라 관찰이다.
