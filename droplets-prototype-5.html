@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>물방울 — 🎨 팔레트</title>
+<style>
+  :root { --ground: #e9ebee; --ink: #14161a; --muted: #6b7078; --line: #ccd0d6; --live: #1b3fa0; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px 16px 72px; background: var(--ground); color: var(--ink);
+    font: 400 16px/1.6 -apple-system, "Apple SD Gothic Neo", "Pretendard",
+          "Noto Sans KR", "Malgun Gothic", sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  main { max-width: 34rem; margin: 0 auto; }
+  .back { color: var(--muted); text-decoration: none; font-size: .875rem; }
+  h1 { font-size: 1.5rem; font-weight: 600; margin: 1.25rem 0 .3rem; }
+  .lede { color: var(--muted); margin: 0 0 1.5rem; }
+
+  .scene { position: relative; touch-action: none; user-select: none; }
+  .board {
+    width: 62%; max-width: 215px; aspect-ratio: 9 / 16;
+    border-radius: 18px; overflow: hidden; background: #6f8ff5;
+    padding: 12px 10px; display: flex; flex-direction: column; gap: 8px;
+    box-shadow: 0 10px 26px rgba(20,30,60,.18);
+  }
+  .widgets { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .w { border-radius: 10px; background: #22304f; height: 52px; }
+  .w.pale { background: rgba(255,255,255,.6); height: 23px; }
+  .col { display: flex; flex-direction: column; gap: 6px; }
+  .icons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px 7px; margin-top: 6px; }
+  .ic { aspect-ratio: 1; border-radius: 10px; background: #fff; }
+  .ic:nth-child(2) { background: #5865f2; }
+  .ic:nth-child(3) { background: #fae100; }
+  .ic:nth-child(5) { background: #7b2ff7; }
+  .ic:nth-child(7) { background: #21b573; }
+  .ic:nth-child(8) { background: #111; }
+  .dock { margin-top: auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+  .dock div { aspect-ratio: 1; border-radius: 50%; background: #fff; }
+
+  /* 재질은 물방울을 통해서만 보인다 */
+  .tex {
+    position: absolute; inset: -12%; opacity: 0; pointer-events: none;
+    transition: opacity .7s ease; transform: scale(1.25);
+  }
+  .tex.show { opacity: .92; }
+  /* 물방울이 모은 빛이 아래에 맺힌다 */
+  .caustic {
+    position: absolute; left: 0; top: 0; border-radius: 50%;
+    background: radial-gradient(ellipse at 50% 50%, rgba(255,252,240,.9) 0 35%, rgba(255,250,235,0) 72%);
+    filter: blur(4px); opacity: 0; pointer-events: none;
+    transition: opacity .7s ease;
+  }
+  .caustic.show { opacity: .75; }
+
+  /* 물방울: 색 없음. 렌즈일 뿐 */
+  .drop {
+    position: absolute; left: 0; top: 0; border-radius: 50%; overflow: hidden;
+    -webkit-backdrop-filter: brightness(1.04) contrast(1.04) saturate(1.04);
+    backdrop-filter: brightness(1.04) contrast(1.04) saturate(1.04);
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.55),
+      inset 0 calc(var(--dome) * -10px) calc(var(--dome) * 16px) rgba(255,255,255,.4),
+      inset 0 calc(var(--dome) * 7px) calc(var(--dome) * 14px) rgba(20,35,70,.14),
+      0 calc(var(--dome) * 4px) calc(var(--dome) * 10px) rgba(15,25,55,.2);
+    cursor: grab; touch-action: none; will-change: transform;
+    transition: width .3s ease, height .3s ease;
+  }
+  .drop::after {
+    content: ""; position: absolute; left: 21%; top: 15%;
+    width: calc(24% * var(--dome) + 6%); height: calc(18% * var(--dome) + 5%);
+    border-radius: 50%; background: rgba(255,255,255,.8); filter: blur(2px);
+    pointer-events: none; z-index: 2;
+  }
+  .wake {
+    position: absolute; left: 0; top: 0; border-radius: 50%;
+    background: rgba(255,255,255,.28); pointer-events: none;
+    will-change: transform, opacity; opacity: 0;
+  }
+
+  .status { color: var(--muted); font-size: .875rem; min-height: 1.6em; margin: 1rem 0 .25rem; }
+  .row { display: flex; align-items: center; gap: .75rem; padding: .7rem 0; border-bottom: 1px solid var(--line); }
+  .row label { flex: 0 0 4rem; }
+  input[type="range"] { flex: 1; accent-color: var(--live); }
+  .val { color: var(--muted); font-size: .875rem; min-width: 2.75rem; text-align: right; }
+  .buttons { display: flex; flex-wrap: wrap; gap: .5rem; padding-top: 1rem; }
+  button {
+    font: inherit; font-weight: 600; color: #fff; background: var(--live);
+    border: 0; border-radius: 4px; padding: .5rem 1rem; cursor: pointer;
+  }
+  button.quiet { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
+  button:disabled { opacity: .45; cursor: default; }
+  .note { margin-top: 1.75rem; color: var(--muted); font-size: .9375rem; }
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="../">← 팔레트</a>
+  <h1>물방울</h1>
+  <p class="lede">물방울에는 색이 없다. 찾은 재질이 아래에 깔리고,<br>
+    물방울은 그것을 비출 뿐이다.</p>
+
+  <div class="scene" id="scene">
+    <div class="board" id="board">
+      <div class="widgets">
+        <div class="w"></div>
+        <div class="col"><div class="w pale"></div><div class="w pale"></div></div>
+      </div>
+      <div class="icons">
+        <div class="ic"></div><div class="ic"></div><div class="ic"></div><div class="ic"></div>
+        <div class="ic"></div><div class="ic"></div><div class="ic"></div><div class="ic"></div>
+      </div>
+      <div class="dock"><div></div><div></div><div></div><div></div></div>
+    </div>
+  </div>
+
+  <p class="status" id="status">줄지어 들이기를 눌러보세요.</p>
+
+  <div class="row">
+    <label for="angle">접촉각</label>
+    <input id="angle" type="range" min="30" max="150" step="1" value="67">
+    <span class="val" id="angleOut">67°</span>
+  </div>
+
+  <div class="buttons">
+    <button id="pourAll">줄지어 들이기</button>
+    <button id="read">이 화면 읽기</button>
+    <button id="sweep" class="quiet">한번에 걷어내기</button>
+  </div>
+
+  <p class="note">떠는 모양은 라이덴프로스트 물방울의 별 모드다.
+    읽는 과정 자체는 아직 연출이고, 찾는 결과는 미리 정해져 있다.</p>
+</main>
+
+<script>
+const VOL = 14000;
+const NOISE = "url('data:image/svg+xml;utf8," +
+  "<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2290%22 height=%2290%22>" +
+  "<filter id=%22n%22><feTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 " +
+  "numOctaves=%223%22 stitchTiles=%22stitch%22/></filter>" +
+  "<rect width=%2290%22 height=%2290%22 filter=%22url(%23n)%22 opacity=%220.45%22/></svg>')";
+
+// 재질. 색이 아니라 짜임과 결.
+const ELEMENTS = [
+  { name: "성긴 직물", mode: 3, tex:
+    `${NOISE},
+     repeating-linear-gradient(90deg, #d8c9ad 0 3px, #e9ddc6 3px 6px),
+     repeating-linear-gradient(0deg, rgba(120,100,70,.22) 0 3px, transparent 3px 6px),
+     linear-gradient(#e6d9c0, #e6d9c0)` },
+  { name: "고운 종이", mode: 4, tex:
+    `${NOISE},
+     repeating-linear-gradient(0deg, rgba(140,130,110,.10) 0 1px, transparent 1px 4px),
+     linear-gradient(#f2ece0, #ece5d6)` },
+  { name: "골이 진 천", mode: 5, tex:
+    `${NOISE},
+     repeating-linear-gradient(90deg, #cbbb9c 0 4px, #e3d6bb 4px 9px, #f0e7d3 9px 11px),
+     linear-gradient(#ddd0b4, #ddd0b4)` },
+  { name: "거친 캔버스", mode: 6, tex:
+    `${NOISE},
+     repeating-linear-gradient(90deg, rgba(110,95,65,.28) 0 2px, transparent 2px 7px),
+     repeating-linear-gradient(0deg, rgba(110,95,65,.28) 0 2px, transparent 2px 7px),
+     linear-gradient(#e0d3b6, #e0d3b6)` },
+];
+
+const scene = document.getElementById("scene");
+const board = document.getElementById("board");
+const statusEl = document.getElementById("status");
+const angleInput = document.getElementById("angle");
+const angleOut = document.getElementById("angleOut");
+const readBtn = document.getElementById("read");
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function cap(deg, V) {
+  const t = deg * Math.PI / 180, c = Math.cos(t);
+  const R = Math.cbrt(3 * V / (Math.PI * (2 - 3 * c + c * c * c)));
+  return { d: 2 * R * Math.sin(t), dome: Math.min((1 - Math.cos(t)) / 2, 1) };
+}
+const cling = (deg) => 1 - (deg - 30) / 120;
+
+let angle = 67;
+
+const drops = ELEMENTS.map((e, i) => {
+  const caustic = document.createElement("div");
+  caustic.className = "caustic";
+  scene.appendChild(caustic);
+  const wake = document.createElement("div");
+  wake.className = "wake";
+  scene.appendChild(wake);
+  const el = document.createElement("div");
+  el.className = "drop";
+  el.setAttribute("role", "button");
+  el.setAttribute("aria-label", e.name);
+  const tex = document.createElement("div");
+  tex.className = "tex";
+  tex.style.background = e.tex;
+  tex.style.backgroundSize = "90px 90px, auto, auto, auto";
+  el.appendChild(tex);
+  scene.appendChild(el);
+  return { ...e, el, wake, sw: tex, caustic, slot: i, r: 34, where: "away", state: "blank",
+           phase: i * Math.PI / 2, x: 0, y: 0, vx: 0, vy: 0, tx: 0, ty: 0, lx: 0, ly: 0 };
+});
+
+const sceneBox = () => scene.getBoundingClientRect();
+const boardBox = () => board.getBoundingClientRect();
+
+const away = (d) => ({ x: sceneBox().width + 60, y: 30 + d.slot * 30 });
+function railSlot(d) {
+  const b = boardBox();
+  return { x: b.width + 14, y: 26 + d.slot * (d.r + 14) };
+}
+const onBoard = (d) => {
+  const b = boardBox();
+  return { x: b.width * 0.3 - d.r / 2, y: b.height * 0.34 - d.r / 2 };
+};
+const target = (d) =>
+  d.where === "rail" ? railSlot(d) : d.where === "board" ? onBoard(d) : away(d);
+
+function sizeAll() {
+  for (const d of drops) {
+    const { d: dia, dome } = cap(angle, VOL);
+    d.r = dia;
+    d.el.style.width = d.el.style.height = dia + "px";
+    d.el.style.setProperty("--dome", dome.toFixed(3));
+    d.wake.style.width = dia + "px";
+    d.wake.style.height = dia * 0.55 + "px";
+    d.caustic.style.width = dia * 1.15 + "px";
+    d.caustic.style.height = dia * 0.5 + "px";
+  }
+  for (const d of drops) {
+    if (d === active) continue;
+    const p = target(d);
+    d.tx = p.x; d.ty = p.y;
+    if (!d.placed) { d.x = p.x; d.y = p.y; d.lx = p.x; d.ly = p.y; d.placed = true; }
+  }
+}
+
+// 라이덴프로스트: n개 꼭짓점을 가진 별 모드
+function star(n, eps, rot, pts = 34) {
+  const out = [];
+  for (let i = 0; i < pts; i++) {
+    const th = (i / pts) * Math.PI * 2;
+    const r = 50 * (1 + eps * Math.cos(n * (th - rot)));
+    out.push(`${(50 + r * Math.cos(th)).toFixed(1)}% ${(50 + r * Math.sin(th)).toFixed(1)}%`);
+  }
+  return `polygon(${out.join(",")})`;
+}
+
+const t0 = performance.now();
+function tick(now) {
+  const t = (now - t0) / 1000;
+  const c = cling(angle);
+  const k = 0.20 - c * 0.09, damp = 0.80 - c * 0.09;
+  for (const d of drops) {
+    let tx = d.tx, ty = d.ty;
+    if (d.state === "searching" && d !== active) {
+      tx += Math.sin(t * 1.25 + d.phase) * 3.5;
+      ty += Math.cos(t * 1.25 + d.phase) * 3.5;
+    }
+    d.vx = (d.vx + (tx - d.x) * k) * damp;
+    d.vy = (d.vy + (ty - d.y) * k) * damp;
+    d.x += d.vx; d.y += d.vy;
+
+    const lag = 0.15 + c * 0.13;
+    d.lx += (d.x - d.lx) * lag;
+    d.ly += (d.y - d.ly) * lag;
+
+    const sp = Math.hypot(d.vx, d.vy);
+    const dir = Math.atan2(d.vy, d.vx) * 180 / Math.PI;
+    const st = Math.min(sp / 26, 0.42) * (0.55 + c * 0.7);
+    d.el.style.transform =
+      `translate(${d.x}px, ${d.y}px) rotate(${dir}deg) scale(${1 + st}, ${1 - st * 0.6}) rotate(${-dir}deg)`;
+
+    const want = d.state === "searching" ? 1 : 0;
+    d.osc = (d.osc ?? 0) + (want - (d.osc ?? 0)) * 0.055;
+    if (d.osc > 0.015) {
+      const eps = d.osc * 0.17 * (0.72 + 0.28 * Math.sin(t * 1.35 + d.phase));
+      d.el.style.clipPath = star(d.mode, eps, t * 0.45 + d.phase);
+    } else {
+      d.el.style.clipPath = "none";
+    }
+
+    d.caustic.style.transform =
+      `translate(${d.x - d.r * 0.075}px, ${d.y + d.r * 0.78}px)`;
+
+    const mx = (d.x + d.lx) / 2, my = (d.y + d.ly) / 2;
+    const stretch = 1 + Math.hypot(d.x - d.lx, d.y - d.ly) / d.r;
+    d.wake.style.transform =
+      `translate(${mx}px, ${my + d.r * 0.22}px) rotate(${dir}deg) scale(${stretch}, 1) rotate(${-dir}deg)`;
+    d.wake.style.opacity = Math.min(sp / 9, 1) * 0.5 * c;
+  }
+  requestAnimationFrame(tick);
+}
+
+function moveTo(d, where, delay = 0) {
+  d.where = where;
+  const go = () => { const p = target(d); d.tx = p.x; d.ty = p.y; };
+  delay ? setTimeout(go, delay) : go();
+}
+
+function read() {
+  const line = drops.filter((d) => d.where === "rail");
+  if (!line.length) { statusEl.textContent = "먼저 물방울을 들여야 한다"; return; }
+  readBtn.disabled = true;
+  statusEl.textContent = "이 화면에서 재질을 파악하는 중…";
+  for (const d of line) { d.state = "searching"; d.sw.classList.remove("show"); d.caustic.classList.remove("show"); }
+  line.forEach((d, i) => {
+    setTimeout(() => {
+      d.state = "found";
+      d.sw.classList.add("show"); d.caustic.classList.add("show");
+      statusEl.textContent = `찾음 — ${d.name}`;
+      if (i === line.length - 1) {
+        setTimeout(() => {
+          statusEl.textContent = `${line.length}개 찾음`;
+          readBtn.disabled = false;
+        }, 700);
+      }
+    }, 1600 + i * 850);
+  });
+}
+
+let active = null, offX = 0, offY = 0;
+scene.addEventListener("pointerdown", (ev) => {
+  const el = ev.target.closest(".drop");
+  if (!el) return;
+  const d = drops.find((x) => x.el === el);
+  if (!d || d.where === "away") return;
+  active = d; el.setPointerCapture(ev.pointerId);
+  const s = sceneBox();
+  offX = ev.clientX - s.left - d.x;
+  offY = ev.clientY - s.top - d.y;
+  statusEl.textContent = d.state === "found" ? d.name : "아직 안 읽은 물방울";
+});
+scene.addEventListener("pointermove", (ev) => {
+  if (!active) return;
+  const s = sceneBox();
+  active.tx = ev.clientX - s.left - offX;
+  active.ty = ev.clientY - s.top - offY;
+});
+function release() {
+  if (!active) return;
+  const d = active, s = sceneBox(), b = boardBox();
+  const cx = d.tx + d.r / 2, cy = d.ty + d.r / 2;
+  active = null;
+  if (d.tx > s.width - d.r * 0.6 || d.vx > 5) {
+    moveTo(d, "away");
+    d.state = "blank"; d.sw.classList.remove("show"); d.caustic.classList.remove("show");
+    statusEl.textContent = `${d.name} — 뺐다`;
+  } else if (cx < b.width && cy < b.height) {
+    d.where = "board";
+    d.tx = Math.max(0, Math.min(d.tx, b.width - d.r));
+    d.ty = Math.max(0, Math.min(d.ty, b.height - d.r));
+    statusEl.textContent = `${d.name} — 화면 위`;
+  } else {
+    moveTo(d, "rail");
+    statusEl.textContent = `${d.name} — 옆에 놓임`;
+  }
+}
+scene.addEventListener("pointerup", release);
+scene.addEventListener("pointercancel", release);
+
+document.getElementById("pourAll").addEventListener("click", () => {
+  drops.forEach((d, i) => moveTo(d, "rail", i * 150));
+  statusEl.textContent = "네 개 다 옆에 놓임";
+});
+document.getElementById("sweep").addEventListener("click", () => {
+  drops.forEach((d) => {
+    moveTo(d, "away");
+    d.state = "blank";
+    d.sw.classList.remove("show");
+    d.caustic.classList.remove("show");
+  });
+  statusEl.textContent = "다 걷어냄";
+});
+readBtn.addEventListener("click", read);
+angleInput.addEventListener("input", (e) => {
+  angle = Number(e.target.value);
+  angleOut.textContent = angle + "°";
+  sizeAll();
+});
+addEventListener("resize", sizeAll);
+
+sizeAll();
+if (!reduced) requestAnimationFrame(tick);
+requestAnimationFrame(() => drops.forEach((d, i) => moveTo(d, "rail", 350 + i * 150)));
+</script>
+</body>
+</html>
