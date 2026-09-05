@@ -1,9 +1,0 @@
-{
-  "id": "bg-saturation",
-  "name": "배경 채도",
-  "param": "filter: saturate()",
-  "neutral": "0.15",
-  "observed": "1.60",
-  "from": "are.na — One UI 홈 화면 배경 두 장",
-  "note": "쨍한 파랑에서 가라앉은 회청으로 갈 때 '편안함'과 '깊이감'이 함께 올라왔다. 배경을 없앤 게 아니라 갈아끼운 것이므로, 감산 = 중립값 복귀."
-}
