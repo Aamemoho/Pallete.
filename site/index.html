@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>🎨 팔레트</title>
+<style>
+  :root {
+    --ground: #e9ebee;
+    --panel: #f4f5f7;
+    --ink: #14161a;
+    --muted: #6b7078;
+    --line: #ccd0d6;
+    --live: #1b3fa0;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 32px 20px 96px;
+    background: var(--ground);
+    color: var(--ink);
+    font: 400 16px/1.6 -apple-system, "Apple SD Gothic Neo", "Pretendard",
+          "Noto Sans KR", "Malgun Gothic", sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  main { max-width: 34rem; margin: 0 auto; }
+  h1 { font-size: 1.75rem; font-weight: 600; margin: 0 0 .4rem; letter-spacing: -.01em; }
+  .lede { color: var(--muted); margin: 0 0 3rem; }
+  h2 { font-size: 1rem; font-weight: 600; margin: 0 0 1rem; }
+  section + section { margin-top: 3.5rem; }
+
+  ul { list-style: none; margin: 0; padding: 0; }
+
+  .element {
+    display: flex; align-items: baseline; gap: .75rem;
+    padding: .85rem 0; border-bottom: 1px solid var(--line);
+  }
+  .element a { color: inherit; text-decoration: none; font-weight: 600; }
+  .element a:hover, .element a:focus-visible { text-decoration: underline; }
+  .element .param { color: var(--muted); font-size: .875rem; margin-left: auto; }
+
+  .obs { padding: 1.25rem 0 1.5rem; border-bottom: 1px solid var(--line); }
+  .obs img {
+    display: block; width: 100%; max-width: 240px; height: auto;
+    border-radius: 3px; background: var(--panel); margin-bottom: .9rem;
+  }
+  .obs dl { margin: 0; display: grid; grid-template-columns: 4.5rem 1fr; gap: .35rem .75rem; }
+  .obs dt { color: var(--muted); font-size: .875rem; }
+  .obs dd { margin: 0; }
+  .obs dd:empty::after {
+    content: ""; display: block; width: 7rem; height: 1px;
+    background: var(--ink); opacity: .35; margin-top: .8rem;
+  }
+  .obs .link { display: inline-block; margin-top: .9rem; font-size: .875rem; color: var(--muted); }
+
+  .empty { color: var(--muted); }
+  .empty code { background: var(--panel); padding: .1em .35em; border-radius: 3px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>🎨 팔레트</h1>
+  <p class="lede">화면에서 요소를 하나씩 빼보고, 뭐가 죽는지 본다.<br>
+    뺄 수 있는 것만 요소가 된다.</p>
+
+  <section>
+    <h2>요소</h2>
+    <ul id="elements"></ul>
+  </section>
+
+  <section>
+    <h2>관찰</h2>
+    <div id="observations"></div>
+  </section>
+</main>
+
+<script type="module">
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+async function load(path) {
+  try {
+    const res = await fetch(path);
+    if (!res.ok) throw new Error(res.status);
+    return await res.json();
+  } catch { return []; }
+}
+
+const [elements, observations] = await Promise.all([
+  load("data/elements.json"),
+  load("data/arena.json"),
+]);
+
+$("elements").innerHTML = elements.length
+  ? elements.map((e) => `
+    <li class="element">
+      <a href="elements/${esc(e.id)}/">${esc(e.name)}</a>
+      <span class="param">${esc(e.param)} · 중립 ${esc(e.neutral)}</span>
+    </li>`).join("")
+  : `<li class="empty">아직 없음. <code>site/elements/</code>에 폴더를 하나 만들면 여기 생긴다.</li>`;
+
+$("observations").innerHTML = observations.length
+  ? observations.map((o) => `
+    <article class="obs">
+      ${o.image ? `<img src="${esc(o.image)}" alt="" loading="lazy">` : ""}
+      <dl>
+        <dt>뺀 것</dt><dd>${esc(o.removed || o.raw)}</dd>
+        <dt>예상</dt><dd>${esc(o.expected)}</dd>
+        <dt>실제</dt><dd>${esc(o.actual)}</dd>
+      </dl>
+      <a class="link" href="${esc(o.arena)}">are.na에서 보기</a>
+    </article>`).join("")
+  : `<p class="empty"><code>build.mjs</code>의 CHANNEL에 채널 슬러그를 넣고 <code>npm run build</code>.</p>`;
+</script>
+</body>
+</html>
